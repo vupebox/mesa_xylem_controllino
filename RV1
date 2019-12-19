@@ -1,0 +1,167 @@
+#include <SPI.h>
+#include <Controllino.h>
+
+
+
+// Part 1
+uint8_t in_110v = CONTROLLINO_A0;// antes 2
+uint8_t in_220v  = CONTROLLINO_A1;// antes A5
+uint8_t out_110v = CONTROLLINO_D0;// antes 3
+uint8_t out_220v = CONTROLLINO_D1;// antes 4
+
+uint8_t in_p1= CONTROLLINO_A2;// antes 5
+uint8_t in_p2= CONTROLLINO_A3;//antes 6
+uint8_t in_start = CONTROLLINO_A4; //antes 7
+uint8_t in_stop = CONTROLLINO_A5;// antes 8
+
+
+uint8_t out_p1Large = CONTROLLINO_D2;// antes 9
+uint8_t out_p1Small = CONTROLLINO_D3;// antes 10
+uint8_t out_p2 = CONTROLLINO_D4;// antes 11
+
+uint8_t out_ledGreen = CONTROLLINO_D5;// antes 12
+uint8_t out_ledRed = CONTROLLINO_D6;// antes 13
+
+int delay_p1 = 2000; // >= 125
+int delay_p1s = 200; // >= 125
+int delay_p2 = 250; // >= 250;
+int delay_afterStop = 5000;
+
+bool status_p1Large = false;
+bool status_p1Small = false;
+bool status_p2 = false;
+bool status_start = false;
+
+
+void setup() {
+  pinMode(in_p1,INPUT);
+  pinMode(in_p2,INPUT);
+  pinMode(in_start,INPUT);
+  pinMode(in_stop,INPUT);
+  
+  pinMode(out_p1Large,OUTPUT);
+  pinMode(out_p1Small,OUTPUT);
+  pinMode(out_p2,OUTPUT);
+
+  pinMode(in_110v,INPUT);
+  pinMode(in_220v,INPUT);
+  pinMode(out_110v,OUTPUT);
+  pinMode(out_220v,OUTPUT);
+
+  pinMode(out_ledGreen,OUTPUT);
+  pinMode(out_ledRed,OUTPUT);
+
+  resetParameters();
+}
+
+void loop() {
+  
+  if(digitalRead(in_stop)==HIGH)
+    resetSecuency();
+
+  status_start = digitalRead(in_start);
+
+  if((digitalRead(in_p1)==HIGH) && (!status_p1Large) && (!status_p1Small) && (!status_p2) && (!status_start) ){
+      digitalWrite(out_p1Large,HIGH);
+      status_p1Large = true;
+      delay(delay_p1);
+      digitalWrite(out_p1Small,HIGH);
+      status_p1Small = true;
+      delay(delay_p1s);
+  }
+
+  if((digitalRead(in_p1)==HIGH) && (status_p1Large) && (status_p1Small) && (!status_p2) && (!status_start) ){
+      digitalWrite(out_p1Small,LOW);
+      status_p1Small = false;
+      delay(delay_p1);
+      digitalWrite(out_p1Large,LOW);
+      status_p1Large = false;
+      delay(delay_p1);
+  }
+
+  if((digitalRead(in_p2)==HIGH) && (status_p1Large) && (status_p1Small) && (!status_p2) && (!status_start) ){
+      digitalWrite(out_p2,HIGH);
+      status_p2 = true;
+      delay(delay_p2);
+  }
+
+  if((digitalRead(in_p2)==HIGH) && (status_p1Large) && (status_p1Small) && (status_p2) && (!status_start) ){
+      digitalWrite(out_p2,LOW);
+      status_p2 = false;
+      delay(delay_p2);
+  }
+
+  if(status_p1Large && status_p1Small && status_p2 && status_start){
+    if(digitalRead(in_110v)==HIGH){
+      digitalWrite(out_110v,HIGH);
+      digitalWrite(out_220v,LOW);
+    }else{
+      if(digitalRead(in_220v)==HIGH){
+        digitalWrite(out_110v,LOW);
+        digitalWrite(out_220v,HIGH);
+      }else{
+        digitalWrite(out_110v,LOW);
+        digitalWrite(out_220v,LOW);
+      }
+    }
+  }else{
+      digitalWrite(out_110v,LOW);
+      digitalWrite(out_220v,LOW);
+  }
+    
+ ledIncadors();
+
+}
+
+void ledIncadors(){
+  if((!status_p1Large) && (!status_p1Small) && (!status_p2) && (!status_start)){
+      digitalWrite(out_ledGreen,HIGH); 
+      digitalWrite(out_ledRed,LOW); 
+   }
+
+  if((status_p1Large) && (status_p1Small) && (status_p2) && (!status_start)){
+      digitalWrite(out_ledGreen,HIGH); 
+      digitalWrite(out_ledRed,LOW); 
+   }
+
+  if((status_p1Large) && (status_p1Small) && (status_p2) && (status_start)){
+      digitalWrite(out_ledGreen,HIGH); 
+      digitalWrite(out_ledRed,LOW); 
+   }
+
+  if(((!status_p1Large) || (!status_p1Small)) && ((status_p2) || (status_start))){
+      digitalWrite(out_ledGreen,LOW); 
+      digitalWrite(out_ledRed,HIGH); 
+   }
+
+  if((status_p1Large) && (status_p1Small) && (!status_p2) && (status_start)){
+      digitalWrite(out_ledGreen,LOW); 
+      digitalWrite(out_ledRed,HIGH); 
+   }
+
+}
+
+void resetSecuency(){
+  digitalWrite(out_ledGreen,HIGH); 
+  digitalWrite(out_ledRed,HIGH);
+  digitalWrite(out_110v,LOW);
+  digitalWrite(out_220v,LOW);
+  digitalWrite(out_p2,LOW);
+  delay(delay_p1);
+  digitalWrite(out_p1Small,LOW);
+  delay(delay_p1);
+  digitalWrite(out_p1Large,LOW);
+  resetParameters();
+  delay(delay_afterStop);
+}
+void resetParameters(){
+ status_p1Large = false;
+ status_p1Small = false;
+ status_p2 = false;
+ status_start = false;
+ digitalWrite(out_p1Large,LOW);
+ digitalWrite(out_p1Small,LOW);
+ digitalWrite(out_p2,LOW);
+ digitalWrite(out_110v,LOW);
+ digitalWrite(out_220v,LOW);
+}
